@@ -1,18 +1,20 @@
-import {
-  Links,
-  Meta,
-  Outlet,
-  Scripts,
-  ScrollRestoration,
-  isRouteErrorResponse,
-} from "react-router"
-
+import { Links, Meta, Outlet, Scripts, ScrollRestoration, isRouteErrorResponse, NavLink } from "react-router"
 import type { Route } from "./+types/root"
+import { TooltipProvider } from "~/components/ui/tooltip"
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "~/components/ui/sidebar"
+import { Toaster } from "~/components/ui/sonner"
+import { ChartNoAxesCombined, MessageSquare, Workflow } from "lucide-react"
 import "./app.css"
+
+const NAV_ITEMS = [
+  { to: "/chat", label: "对话调试", icon: MessageSquare },
+  { to: "/strategies", label: "策略规则", icon: ChartNoAxesCombined },
+  { to: "/mappings", label: "模型映射", icon: Workflow },
+]
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -28,8 +30,49 @@ export function Layout({ children }: { children: React.ReactNode }) {
   )
 }
 
+function AppSidebar() {
+  return (
+    <Sidebar>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Mint Admin</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {NAV_ITEMS.map((item) => (
+                <SidebarMenuItem key={item.to}>
+                  <SidebarMenuButton asChild>
+                    <NavLink to={item.to}>
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+    </Sidebar>
+  )
+}
+
 export default function App() {
-  return <Outlet />
+  return (
+    <TooltipProvider>
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <header className="flex h-12 items-center gap-2 border-b px-4">
+            <SidebarTrigger />
+          </header>
+          <div className="p-6">
+            <Outlet />
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+      <Toaster />
+    </TooltipProvider>
+  )
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
