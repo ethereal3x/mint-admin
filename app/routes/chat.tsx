@@ -7,9 +7,15 @@ import { Skeleton } from "~/components/ui/skeleton"
 import { ScrollArea } from "~/components/ui/scroll-area"
 import { fetchModels, fetchHistory, fetchDialogues, streamChat, uploadFile } from "~/lib/api"
 import type { ManufacturerGroup, DialogueSummary } from "~/lib/types"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
+import MarkdownRenderer from "~/components/markdown"
 import { Paperclip, Plus, Send, MessageSquare, X } from "lucide-react"
+
+const MAX_TITLE_LENGTH = 16
+
+function truncateTitle(text: string): string {
+  if (text.length <= MAX_TITLE_LENGTH) return text
+  return text.slice(0, MAX_TITLE_LENGTH) + "..."
+}
 
 interface Message {
   role: "user" | "agent"
@@ -108,7 +114,7 @@ export default function ChatPage() {
     if (!activeDialogueId) {
       setActiveDialogueId(dialogueId)
       setDialogues((prev) => [
-        { dialogue_id: dialogueId, title: question.slice(0, 40), message_count: 0, updated_time: "" },
+        { dialogue_id: dialogueId, title: truncateTitle(question), message_count: 0, updated_time: "" },
         ...prev,
       ])
     }
@@ -137,6 +143,10 @@ export default function ChatPage() {
           try {
             const raw = JSON.parse(line)
             const chunk = raw.result || raw
+            if (chunk.code && chunk.code !== 0) {
+              toast.error(chunk.message || "请求失败")
+              break
+            }
             if (chunk.error) {
               toast.error(chunk.error)
               break
@@ -226,7 +236,7 @@ export default function ChatPage() {
                   }`}
                 >
                   <MessageSquare className="size-4 shrink-0 text-muted-foreground" />
-                  <span className="truncate">{d.title || "新对话"}</span>
+                  <span className="truncate">{truncateTitle(d.title) || "新对话"}</span>
                 </button>
               ))}
             </div>
@@ -286,10 +296,8 @@ export default function ChatPage() {
                     {msg.content ? (
                       <>
                         {msg.role === "agent" ? (
-                          <div className="prose prose-sm dark:prose-invert max-w-none [&_pre]:bg-secondary [&_code]:bg-secondary [&_pre_code]:bg-transparent">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {msg.content}
-                            </ReactMarkdown>
+                          <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <MarkdownRenderer content={msg.content} />
                           </div>
                         ) : (
                           <p className="whitespace-pre-wrap">{msg.content}</p>

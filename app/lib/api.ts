@@ -8,12 +8,15 @@ import type {
   DialogueSummary,
   DialogueRecord,
 } from "~/lib/types"
+import { getToken } from "~/lib/auth"
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(url, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  })
+  const token = getToken()
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`
+  }
+  const response = await fetch(url, { headers, ...options })
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: response.statusText }))
     throw new Error(error.message || `HTTP ${response.status}`)
@@ -58,7 +61,13 @@ export async function deleteConfig(id: number): Promise<void> {
 
 export async function fetchModelStats(): Promise<ModelStat[]> {
   const data = await request<{ stats: ModelStat[] }>("/admin/v1/stats/models")
-  return data.stats
+  return data.stats.map((s) => ({
+    ...s,
+    total_input_tokens: Number(s.total_input_tokens),
+    total_output_tokens: Number(s.total_output_tokens),
+    total_input_cost: Number(s.total_input_cost),
+    total_output_cost: Number(s.total_output_cost),
+  }))
 }
 
 // Agent API
@@ -81,8 +90,14 @@ export async function fetchDialogues(userId?: string): Promise<DialogueSummary[]
 export async function uploadFile(file: File): Promise<string> {
   const formData = new FormData()
   formData.append("file", file)
-  const response = await fetch("/api/v1/files/upload?user_id=admin", {
+  const token = getToken()
+  const headers: Record<string, string> = {}
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`
+  }
+  const response = await fetch("/api/v1/files/upload", {
     method: "POST",
+    headers,
     body: formData,
   })
   if (!response.ok) {
@@ -102,9 +117,14 @@ export async function streamChat(
   imageUrls: string[],
   signal?: AbortSignal,
 ): Promise<ReadableStream<Uint8Array>> {
+  const token = getToken()
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`
+  }
   const response = await fetch("/api/v1/chat/stream", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ model, question, dialogue_id: dialogueId, record_id: recordId, image_urls: imageUrls }),
     signal,
   })

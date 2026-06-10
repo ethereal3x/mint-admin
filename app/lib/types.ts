@@ -78,3 +78,18 @@ export interface DialogueRecord {
   input_cost: number
   output_cost: number
 }
+
+// Auth
+export interface UserInfo {
+  user_id: string
+  display_name: string
+  avatar_url: string
+  status: number
+}
+
+export interface AuthResult {
+  access_token: string
+  token_type: string
+  expires_in: number
+  user: UserInfo
+}

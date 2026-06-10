@@ -14,7 +14,7 @@ import { Skeleton } from "~/components/ui/skeleton"
 import { Badge } from "~/components/ui/badge"
 import { createConfig, deleteConfig, fetchConfig, fetchConfigs, fetchModelStats, updateConfig } from "~/lib/api"
 import type { ModelConfig, ModelStat, ConfigFormData } from "~/lib/types"
-import { Plus, Pencil, Trash2 } from "lucide-react"
+import { Plus, Pencil, Trash2, Coins, Cpu, MessageSquare, TrendingUp } from "lucide-react"
 
 const PAGE_SIZE = 20
 
@@ -153,6 +153,19 @@ export default function ConfigsPage() {
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
+  const dashboardStats = (() => {
+    const entries = Object.values(statsMap)
+    const totalTokens = entries.reduce((sum, s) => sum + s.total_input_tokens + s.total_output_tokens, 0)
+    const totalCost = entries.reduce((sum, s) => sum + s.total_input_cost + s.total_output_cost, 0)
+    let topModel = ""
+    let maxTokens = 0
+    for (const [model, s] of Object.entries(statsMap)) {
+      const t = s.total_input_tokens + s.total_output_tokens
+      if (t > maxTokens) { maxTokens = t; topModel = model }
+    }
+    return { totalTokens, totalCost, modelsCount: configs.length, topModel }
+  })()
+
   return (
     <div className="p-4">
       <Card>
@@ -172,6 +185,45 @@ export default function ConfigsPage() {
             </div>
           ) : (
             <>
+              <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+                <div className="flex items-center gap-3 rounded-lg border p-4">
+                  <div className="flex size-10 items-center justify-center rounded-lg bg-blue-500/10">
+                    <MessageSquare className="size-5 text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">总 Token</p>
+                    <p className="text-lg font-semibold tabular-nums">{formatTokens(dashboardStats.totalTokens)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border p-4">
+                  <div className="flex size-10 items-center justify-center rounded-lg bg-green-500/10">
+                    <Coins className="size-5 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">总费用</p>
+                    <p className="text-lg font-semibold tabular-nums">¥{dashboardStats.totalCost.toFixed(4)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border p-4">
+                  <div className="flex size-10 items-center justify-center rounded-lg bg-purple-500/10">
+                    <Cpu className="size-5 text-purple-500" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">模型数</p>
+                    <p className="text-lg font-semibold tabular-nums">{dashboardStats.modelsCount}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border p-4">
+                  <div className="flex size-10 items-center justify-center rounded-lg bg-orange-500/10">
+                    <TrendingUp className="size-5 text-orange-500" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">最常用模型</p>
+                    <p className="text-sm font-semibold font-mono truncate" title={dashboardStats.topModel}>{dashboardStats.topModel || "-"}</p>
+                  </div>
+                </div>
+              </div>
+
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -231,7 +283,7 @@ export default function ConfigsPage() {
               </Table>
 
               <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-                <span>共 {total} 条</span>
+                <span className="whitespace-nowrap">共 {total} 条</span>
                 <Pagination>
                   <PaginationContent>
                     <PaginationItem>

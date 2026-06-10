@@ -1,15 +1,9 @@
-import { Links, Meta, Outlet, Scripts, ScrollRestoration, isRouteErrorResponse, NavLink } from "react-router"
+import { Links, Meta, Outlet, Scripts, ScrollRestoration, isRouteErrorResponse } from "react-router"
 import type { Route } from "./+types/root"
 import { TooltipProvider } from "~/components/ui/tooltip"
-import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "~/components/ui/sidebar"
 import { Toaster } from "~/components/ui/sonner"
-import { ChartNoAxesCombined, MessageSquare } from "lucide-react"
+import { AuthProvider } from "~/hooks/use-auth"
 import "./app.css"
-
-const NAV_ITEMS = [
-  { to: "/chat", label: "对话调试", icon: MessageSquare },
-  { to: "/configs", label: "模型配置", icon: ChartNoAxesCombined },
-]
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -29,48 +23,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
   )
 }
 
-function AppSidebar() {
-  return (
-    <Sidebar>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Mint Admin</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {NAV_ITEMS.map((item) => (
-                <SidebarMenuItem key={item.to}>
-                  <SidebarMenuButton asChild>
-                    <NavLink to={item.to}>
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
-  )
-}
-
 export default function App() {
   return (
-    <TooltipProvider>
-      <SidebarProvider className="h-svh overflow-hidden">
-        <AppSidebar />
-        <SidebarInset className="overflow-hidden">
-          <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
-            <SidebarTrigger />
-          </header>
-          <div className="flex-1 overflow-hidden">
-            <Outlet />
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
-      <Toaster />
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Outlet />
+        <Toaster position="top-right" />
+      </TooltipProvider>
+    </AuthProvider>
   )
 }
 
