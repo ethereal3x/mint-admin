@@ -3,13 +3,12 @@ import type { Route } from "./+types/root"
 import { TooltipProvider } from "~/components/ui/tooltip"
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "~/components/ui/sidebar"
 import { Toaster } from "~/components/ui/sonner"
-import { ChartNoAxesCombined, MessageSquare, Workflow } from "lucide-react"
+import { ChartNoAxesCombined, MessageSquare } from "lucide-react"
 import "./app.css"
 
 const NAV_ITEMS = [
   { to: "/chat", label: "对话调试", icon: MessageSquare },
-  { to: "/strategies", label: "策略规则", icon: ChartNoAxesCombined },
-  { to: "/mappings", label: "模型映射", icon: Workflow },
+  { to: "/configs", label: "模型配置", icon: ChartNoAxesCombined },
 ]
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -59,13 +58,13 @@ function AppSidebar() {
 export default function App() {
   return (
     <TooltipProvider>
-      <SidebarProvider>
+      <SidebarProvider className="h-svh overflow-hidden">
         <AppSidebar />
-        <SidebarInset>
-          <header className="flex h-12 items-center gap-2 border-b px-4">
+        <SidebarInset className="overflow-hidden">
+          <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
             <SidebarTrigger />
           </header>
-          <div className="p-6">
+          <div className="flex-1 overflow-hidden">
             <Outlet />
           </div>
         </SidebarInset>

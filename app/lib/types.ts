@@ -1,10 +1,11 @@
-export interface Strategy {
+export interface ModelConfig {
   id: number
-  rule_id: string
+  model_type: string
+  manufacturer: string
+  description: string
+  input_price: number
+  output_price: number
   api_key: string
-  agent_model: string
-  agent_manufacturer: string
-  agent_generate_type: string
   url: string
   max_tokens: number
   stream: boolean
@@ -13,20 +14,23 @@ export interface Strategy {
   n: number
   presence_penalty: number
   frequency_penalty: number
+  agent_generate_type: string
   route: string
   is_enabled: number
 }
 
-export interface StrategyListResponse {
-  strategies: Strategy[]
+export interface ConfigListResponse {
+  configs: ModelConfig[]
   total: number
 }
 
-export interface StrategyFormData {
+export interface ConfigFormData {
+  model_type: string
+  manufacturer: string
+  description: string
+  input_price: number
+  output_price: number
   api_key: string
-  agent_model: string
-  agent_manufacturer: string
-  agent_generate_type: string
   url: string
   max_tokens: number
   stream: boolean
@@ -35,31 +39,27 @@ export interface StrategyFormData {
   n: number
   presence_penalty: number
   frequency_penalty: number
+  agent_generate_type: string
   route: string
   is_enabled: number
-}
-
-export interface ModelMapping {
-  id: number
-  model_type: string
-  manufacturer: string
-  description: string
-}
-
-export interface MappingListResponse {
-  mappings: ModelMapping[]
-}
-
-export interface MappingFormData {
-  model_type: string
-  manufacturer: string
-  description: string
 }
 
 export interface ModelInfo {
   model: string
-  manufacturer: string
   description: string
+}
+
+export interface ManufacturerGroup {
+  manufacturer: string
+  models: ModelInfo[]
+}
+
+export interface ModelStat {
+  model: string
+  total_input_tokens: number
+  total_output_tokens: number
+  total_input_cost: number
+  total_output_cost: number
 }
 
 export interface DialogueSummary {
@@ -75,4 +75,6 @@ export interface DialogueRecord {
   agent_content: string
   model: string
   total_tokens: number
+  input_cost: number
+  output_cost: number
 }

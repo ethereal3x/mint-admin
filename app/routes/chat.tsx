@@ -1,37 +1,46 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "~/components/ui/select"
 import { Skeleton } from "~/components/ui/skeleton"
 import { ScrollArea } from "~/components/ui/scroll-area"
-import { fetchModels, fetchHistory, fetchDialogues, streamChat } from "~/lib/api"
-import type { ModelInfo, DialogueSummary, DialogueRecord } from "~/lib/types"
-import { Plus, Send, MessageSquare } from "lucide-react"
+import { fetchModels, fetchHistory, fetchDialogues, streamChat, uploadFile } from "~/lib/api"
+import type { ManufacturerGroup, DialogueSummary } from "~/lib/types"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
+import { Paperclip, Plus, Send, MessageSquare, X } from "lucide-react"
 
 interface Message {
   role: "user" | "agent"
   content: string
+  tokens?: number
+  cost?: number
 }
 
 export default function ChatPage() {
-  const [models, setModels] = useState<ModelInfo[]>([])
+  const [manufacturers, setManufacturers] = useState<ManufacturerGroup[]>([])
   const [selectedModel, setSelectedModel] = useState("")
   const [dialogues, setDialogues] = useState<DialogueSummary[]>([])
   const [activeDialogueId, setActiveDialogueId] = useState("")
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [streaming, setStreaming] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [imageUrls, setImageUrls] = useState<string[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [loadingDialogues, setLoadingDialogues] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetchModels()
-      .then((list) => {
-        setModels(list)
-        if (list.length > 0 && !selectedModel) setSelectedModel(list[0].model)
+      .then((groups) => {
+        setManufacturers(groups)
+        if (groups.length > 0 && groups[0].models.length > 0 && !selectedModel) {
+          setSelectedModel(groups[0].models[0].model)
+        }
       })
       .catch(() => toast.error("加载模型列表失败"))
     loadDialogues()
@@ -61,7 +70,14 @@ export default function ChatPage() {
       const msgs: Message[] = []
       for (const r of records) {
         if (r.user_content) msgs.push({ role: "user", content: r.user_content })
-        if (r.agent_content) msgs.push({ role: "agent", content: r.agent_content })
+        if (r.agent_content) {
+          msgs.push({
+            role: "agent",
+            content: r.agent_content,
+            tokens: r.total_tokens,
+            cost: r.input_cost + r.output_cost,
+          })
+        }
       }
       setMessages(msgs)
     } catch {
@@ -74,6 +90,7 @@ export default function ChatPage() {
   function newChat() {
     setActiveDialogueId("")
     setMessages([])
+    setImageUrls([])
   }
 
   async function handleSend() {
@@ -96,12 +113,14 @@ export default function ChatPage() {
       ])
     }
 
+    const urls = imageUrls
+    setImageUrls([])
     setStreaming(true)
     const controller = new AbortController()
     abortRef.current = controller
 
     try {
-      const body = await streamChat(selectedModel, question, dialogueId, recordId, controller.signal)
+      const body = await streamChat(selectedModel, question, dialogueId, recordId, urls, controller.signal)
       const reader = body.getReader()
       const decoder = new TextDecoder()
       let buffer = ""
@@ -155,6 +174,22 @@ export default function ChatPage() {
     abortRef.current?.abort()
   }
 
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const url = await uploadFile(file)
+      setImageUrls((prev) => [...prev, url])
+      toast.success("上传成功")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "上传失败")
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+  }
+
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
@@ -163,8 +198,8 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)]">
-      <aside className="flex w-64 shrink-0 flex-col border-r">
+    <div className="flex h-full p-4">
+      <aside className="flex w-64 shrink-0 flex-col min-h-0 border-r">
         <div className="flex items-center justify-between p-3">
           <span className="text-sm font-medium">对话历史</span>
           <Button variant="ghost" size="sm" onClick={newChat}>
@@ -199,18 +234,23 @@ export default function ChatPage() {
         </ScrollArea>
       </aside>
 
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col min-h-0">
         <header className="flex items-center gap-3 border-b px-4 py-2">
           <span className="text-sm text-muted-foreground">模型:</span>
           <Select value={selectedModel} onValueChange={setSelectedModel}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-56">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {models.map((m) => (
-                <SelectItem key={m.model} value={m.model}>
-                  {m.model} ({m.manufacturer})
-                </SelectItem>
+              {manufacturers.map((group) => (
+                <SelectGroup key={group.manufacturer}>
+                  <SelectLabel>{group.manufacturer}</SelectLabel>
+                  {group.models.map((m) => (
+                    <SelectItem key={m.model} value={m.model}>
+                      {m.model}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               ))}
             </SelectContent>
           </Select>
@@ -244,7 +284,22 @@ export default function ChatPage() {
                     }`}
                   >
                     {msg.content ? (
-                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                      <>
+                        {msg.role === "agent" ? (
+                          <div className="prose prose-sm dark:prose-invert max-w-none [&_pre]:bg-secondary [&_code]:bg-secondary [&_pre_code]:bg-transparent">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {msg.content}
+                            </ReactMarkdown>
+                          </div>
+                        ) : (
+                          <p className="whitespace-pre-wrap">{msg.content}</p>
+                        )}
+                        {msg.tokens != null && msg.tokens > 0 && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {msg.tokens} tokens{msg.cost != null && msg.cost > 0 ? ` · ¥${msg.cost.toFixed(6)}` : ""}
+                          </p>
+                        )}
+                      </>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-muted-foreground">
                         <span className="size-1.5 animate-bounce rounded-full bg-current [animation-delay:0ms]" />
@@ -260,7 +315,26 @@ export default function ChatPage() {
         </div>
 
         <footer className="border-t p-4">
+          {imageUrls.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {imageUrls.map((url, i) => (
+                <div key={i} className="group relative size-14 overflow-hidden rounded-md border">
+                  <img src={url} alt="" className="size-full object-cover" />
+                  <button
+                    onClick={() => setImageUrls((prev) => prev.filter((_, j) => j !== i))}
+                    className="absolute right-0.5 top-0.5 rounded-full bg-black/50 p-0.5 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="flex items-center gap-2">
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+            <Button variant="ghost" size="icon" disabled={streaming || uploading} onClick={() => fileInputRef.current?.click()} title="上传图片">
+              <Paperclip className={uploading ? "animate-pulse" : ""} />
+            </Button>
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}

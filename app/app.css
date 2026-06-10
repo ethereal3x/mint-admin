@@ -122,9 +122,31 @@
     @apply border-border outline-ring/50;
     }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground h-full;
     }
   html {
-    @apply font-sans;
+    @apply font-sans h-full;
     }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 2px;
+    transition: background 0.3s;
+  }
+  :hover::-webkit-scrollbar-thumb {
+    background: hsl(var(--border) / 0.3);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--border) / 0.6);
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
 }
